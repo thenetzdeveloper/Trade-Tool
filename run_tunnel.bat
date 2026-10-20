@@ -1,0 +1,9 @@
+@echo off
+echo Starting XAUUSD Trading Bot Flask Server...
+start cmd /k ".venv\Scripts\python.exe app.py"
+
+echo Waiting for Flask to initialize (3 seconds)...
+timeout /t 3 /nobreak
+
+echo Starting Cloudflare Tunnel to expose http://localhost:5002 ...
+.\cloudflared.exe tunnel --url http://127.0.0.1:5002

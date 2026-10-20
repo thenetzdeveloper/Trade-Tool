@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAUUSD AI Trading Dashboard & Bot</title>
+    <!-- Google Fonts: Outfit and Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Lightweight Charts for Dynamic Price Levels -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fa-solid fa-cube logo-icon"></i>
+                <div class="logo-text">
+                    <span class="logo-title">GOLD BOT AI</span>
+                    <span class="logo-subtitle">XAUUSD ANALYTICS</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-line"></i> <span>ផ្ទាំងបញ្ជា (Dashboard)</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="chart">
+                    <i class="fa-solid fa-chart-area"></i> <span>ក្រាហ្វផ្ទាល់ (Live Chart)</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="calendar">
+                    <i class="fa-solid fa-calendar-days"></i> <span>កាលវិភាគព័ត៌មាន (Calendar)</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="settings">
+                    <i class="fa-solid fa-sliders"></i> <span>ការកំណត់ (Settings)</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="analytics">
+                    <i class="fa-solid fa-chart-pie"></i> <span>របាយការណ៍ជួញដូរ (Analytics)</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="profile">
+                    <i class="fa-solid fa-user"></i> <span>ប្រវត្តិរូប (Profile)</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-status-card">
+                <div class="status-title">ស្ថានភាពប្រព័ន្ធ (System Status)</div>
+                <div class="status-item">
+                    <span>MetaTrader 5:</span>
+                    <span id="mt5-status-badge" class="badge badge-warning">Checking...</span>
+                </div>
+                <div class="status-item">
+                    <span>AI Model:</span>
+                    <span id="ai-status-badge" class="badge badge-warning">Checking...</span>
+                </div>
+                <div class="status-item">
+                    <span>Live Trading:</span>
+                    <span id="trading-status-badge" class="badge badge-danger">Disabled</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Navbar Header -->
+            <header class="top-header">
+                <div class="header-search">
+                    <span class="symbol-tag">XAUUSD</span>
+                    <span class="price-ticker" id="header-price-ticker">$---.--</span>
+                    <span id="price-change-percent" class="price-neutral">---%</span>
+                </div>
+                
+                <div class="header-actions">
+                    <div class="timeframe-selector">
+                        <button class="tf-btn" data-tf="M5">M5</button>
+                        <button class="tf-btn" data-tf="M15">M15</button>
+                        <button class="tf-btn active" data-tf="H1">H1</button>
+                        <button class="tf-btn" data-tf="D1">D1</button>
+                    </div>
+                    <button class="btn btn-success" id="toggle-bot-btn">
+                        <i class="fa-solid fa-play"></i> Run Bot Trade
+                    </button>
+                    <button class="btn btn-primary animate-pulse" id="run-ai-btn">
+                        <i class="fa-solid fa-microchip"></i> វិភាគដោយ AI (Run AI Analysis)
+                    </button>
+                </div>
+            </header>
+
+            <!-- TAB 1: Dashboard Panel -->
+            <section id="tab-dashboard" class="tab-pane active">
+                <!-- Backup Keys Alert Banner -->
+                <div id="backup-keys-alert-banner" style="display: none; margin-bottom: 1.5rem; padding: 1rem 1.5rem; border-radius: 12px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; font-size: 0.95rem; align-items: center; gap: 0.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size: 1.2rem; color: #ef4444; margin-right: 0.5rem;"></i>
+                    <span id="backup-keys-alert-text"></span>
+                </div>
+                
+                <div class="grid-layout grid-main">
+                    <!-- Column 1: AI Trade Signal Panel -->
+                    <div class="card glass-card span-double trade-signal-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-bell-concierge"></i> សញ្ញាជួញដូរពី AI (AI Trading Signal)</h3>
+                            <span class="timestamp" id="signal-timestamp">មិនទាន់វិភាគ</span>
+                        </div>
+                        <div class="card-content signal-display-wrapper">
+                            <div class="signal-gauge-container">
+                                <div class="signal-gauge" id="main-signal-gauge">
+                                    <div class="signal-value" id="signal-value">WAIT</div>
+                                    <div class="signal-confidence" id="signal-confidence">---% Confidence</div>
+                                </div>
+                            </div>
+                            <div class="signal-details">
+                                <div class="trade-targets grid-layout grid-three">
+                                    <div class="target-box entry">
+                                        <div class="target-label">ចំណុចចូល (Entry)</div>
+                                        <div class="target-value" id="entry-price-val">---.--</div>
+                                    </div>
+                                    <div class="target-box sl">
+                                        <div class="target-label">Stop Loss (SL)</div>
+                                        <div class="target-value" id="sl-price-val">---.--</div>
+                                    </div>
+                                    <div class="target-box tp">
+                                        <div class="target-label">Take Profit (TP)</div>
+                                        <div class="target-value" id="tp-price-val">---.--</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="reason-section">
+                                    <h4><i class="fa-solid fa-quote-left"></i> ការវិភាគសង្ខេបជាភាសាខ្មែរ</h4>
+                                    <p class="reason-text" id="reason-khmer-val">
+                                        សូមចុចលើប៊ូតុង "វិភាគដោយ AI" នៅជ្រុងកំពូលស្តាំដើម្បីដំណើរការវិភាគព័ត៌មាន និងបច្ចេកទេស។
+                                    </p>
+                                    <h4 class="mt-3"><i class="fa-solid fa-quote-left"></i> English Translation</h4>
+                                    <p class="reason-text-en" id="reason-english-val">
+                                        Click the "Run AI Analysis" button on the top right to start combining technical trends and macroeconomic news events.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer order-status-footer" id="order-execution-status">
+                            <i class="fa-solid fa-circle-info"></i> បតស្ថិតក្នុងរបៀបពិភាក្សា/ត្រួតពិនិត្យ (Simulation Mode)
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Technical Indicators Panel -->
+                    <div class="card glass-card technicals-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-simple"></i> សូចនាករបច្ចេកទេស (Technicals)</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="tech-item">
+                                <span class="tech-label">H1 Trend (EMA 20/50):</span>
+                                <span id="indicator-ema-trend" class="tech-val neutral">Neutral</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-label">EMA 200 Position:</span>
+                                <span id="indicator-ema200-pos" class="tech-val neutral">Neutral</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-label">RSI (14) Momentum:</span>
+                                <span id="indicator-rsi" class="tech-val neutral">--.--</span>
+                            </div>
+                            <div class="rsi-gauge-track">
+                                <div class="rsi-gauge-pointer" id="rsi-pointer" style="left: 50%;"></div>
+                            </div>
+                            <div class="rsi-labels">
+                                <span>Oversold (30)</span>
+                                <span>Overbought (70)</span>
+                            </div>
+                            <div class="tech-item mt-3">
+                                <span class="tech-label">Volatility (ATR 14):</span>
+                                <span id="indicator-atr" class="tech-val font-monospace">--.--</span>
+                            </div>
+                            
+                            <hr class="card-separator">
+                            
+                            <div class="tech-item">
+                                <span class="tech-label">MACD (12,26,9):</span>
+                                <span id="indicator-macd" class="tech-val neutral">--.--</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-label">Bollinger Bands:</span>
+                                <span id="indicator-bb" class="tech-val neutral">Neutral</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-label">Stochastic (14,3,3):</span>
+                                <span id="indicator-stoch" class="tech-val neutral">--.--</span>
+                            </div>
+                            <div class="tech-item">
+                                <span class="tech-label">Support / Resistance:</span>
+                                <span id="indicator-sr" class="tech-val font-monospace">--.-- / --.--</span>
+                            </div>
+                            
+                            <hr class="card-separator">
+                            
+                            <div class="market-values-grid">
+                                <div>
+                                    <div class="val-lbl">EMA 20</div>
+                                    <div class="val-num" id="val-ema20">---.--</div>
+                                </div>
+                                <div>
+                                    <div class="val-lbl">EMA 50</div>
+                                    <div class="val-num" id="val-ema50">---.--</div>
+                                </div>
+                                <div>
+                                    <div class="val-lbl">EMA 200</div>
+                                    <div class="val-num" id="val-ema200">---.--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center" id="data-source-badge">
+                            ប្រភពទិន្នន័យ៖ Checking...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-layout grid-second">
+                    <!-- Column 1: Financial News Feed -->
+                    <div class="card glass-card span-double news-feed-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-newspaper"></i> ព័ត៌មានទីផ្សារសកល (Global Market News)</h3>
+                            <button class="btn-icon" id="refresh-news-btn"><i class="fa-solid fa-rotate"></i></button>
+                        </div>
+                        <div class="card-content">
+                            <div class="news-list" id="news-list-container">
+                                <div class="loading-news text-center">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> កំពុងទាញយកព័ត៌មាន...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Bot Logs -->
+                    <div class="card glass-card logs-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-list-check"></i> កំណត់ត្រាបត (System & Trade Logs)</h3>
+                            <button class="btn-icon" id="clear-logs-btn"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                        <div class="card-content">
+                            <div class="log-terminal" id="log-terminal-output">
+                                <div class="log-line system">[SYSTEM] Bot system starting up...</div>
+                                <div class="log-line system">[SYSTEM] Loading environment configuration...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: Live Chart -->
+            <section id="tab-chart" class="tab-pane">
+                <div class="card glass-card chart-full-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-chart-area"></i> ក្រាហ្វវិភាគបច្ចេកទេស XAUUSD Live Chart (<span id="candle-count-display">0</span> bars)</h3>
+                        <span class="chart-status-pill" id="chart-status-pill"><i class="fa-solid fa-clock"></i> Waiting for data</span>
+                    </div>
+                    <div class="card-content chart-content">
+                        <!-- Custom Lightweight Chart for dynamic Entry, SL, and TP lines -->
+                        <div id="custom_lightweight_chart"></div>
+
+                        <!-- Floating AI Analysis overlay -->
+                        <div class="chart-overlay-signal" id="chart-overlay-signal" style="display: none;">
+                            <div class="overlay-signal-badge" id="overlay-signal-badge">WAIT</div>
+                            <div class="overlay-signal-details">
+                                <div class="overlay-signal-row">
+                                    <span class="overlay-label">Confidence:</span>
+                                    <span class="overlay-value" id="overlay-confidence">---%</span>
+                                </div>
+                                <div class="overlay-signal-row">
+                                    <span class="overlay-label">Entry Price:</span>
+                                    <span class="overlay-value" id="overlay-entry">---.--</span>
+                                </div>
+                                <div class="overlay-signal-row">
+                                    <span class="overlay-label">SL / TP:</span>
+                                    <span class="overlay-value" id="overlay-sltp">---.-- / ---.--</span>
+                                </div>
+                                <div class="overlay-signal-time" id="overlay-timestamp">Last updated: --:--:--</div>
+                            </div>
+                        </div>
+
+                        <!-- Floating Active Broker Trades overlay -->
+                        <div class="chart-overlay-positions" id="chart-overlay-positions" style="display: none;">
+                            <div class="overlay-positions-header">
+                                <i class="fa-solid fa-wallet"></i> <span>គណនីជួញដូរផ្ទាល់ (Active Trades)</span>
+                            </div>
+                            <div class="overlay-positions-list" id="overlay-positions-list">
+                                <!-- Position items injected dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: Economic Calendar -->
+            <section id="tab-calendar" class="tab-pane">
+                <div class="card glass-card calendar-full-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-calendar-days"></i> កាលវិភាគសេដ្ឋកិច្ចសកល (Macroeconomic Calendar)</h3>
+                        <span class="calendar-status-pill"><i class="fa-solid fa-globe"></i> Live Events</span>
+                    </div>
+                    <div class="card-content calendar-content">
+                        <!-- TradingView Economic Calendar Widget -->
+                        <div class="tradingview-widget-container calendar-widget">
+                            <div class="tradingview-widget-container__widget"></div>
+                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+                            {
+                              "colorTheme": "dark",
+                              "isMarketMin": false,
+                              "width": "100%",
+                              "height": "100%",
+                              "locale": "en",
+                              "importanceFilter": "-1,0,1"
+                            }
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: Settings -->
+            <section id="tab-settings" class="tab-pane">
+                <div class="grid-layout grid-settings">
+                    <!-- General Settings -->
+                    <div class="card glass-card settings-general">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-gears"></i> ការកំណត់ទូទៅ និង AI Keys</h3>
+                        </div>
+                        <div class="card-content">
+                            <form id="settings-form">
+                                <div class="form-group">
+                                    <label for="api_provider">ជ្រើសរើស AI Engine</label>
+                                    <select id="api_provider" class="form-control">
+                                        <option value="gemini">Google Gemini (Recommended - Free Tier)</option>
+                                        <option value="openai">OpenAI GPT-4o</option>
+                                        <option value="claude">Anthropic Claude 3.5 Sonnet</option>
+                                        <option value="ensemble">AI Consensus (Ensemble: GPT + Gemini + Claude)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="gemini-key-group">
+                                    <label for="gemini_key">Google Gemini API Key</label>
+                                    <div class="input-password-wrapper">
+                                        <input type="password" id="gemini_key" class="form-control" placeholder="AIzaSy...">
+                                        <button type="button" class="toggle-password-btn"><i class="fa-solid fa-eye"></i></button>
+                                    </div>
+                                    <small class="form-help">បង្កើត API Key ដោយឥតគិតថ្លៃនៅ Google AI Studio</small>
+                                    
+                                    <div class="mt-3 ps-3" style="border-left: 2px solid rgba(255, 255, 255, 0.08); margin-top: 1rem;">
+                                        <h5 class="text-light fw-semibold mb-2" style="font-size: 0.9rem;"><i class="fa-solid fa-layer-group text-info"></i> គ្រាប់ API សារគួរ (Backup Gemini API Keys)</h5>
+                                        <div class="form-group grid-layout" style="grid-template-columns: 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+                                            <div>
+                                                <label class="text-light-muted small">Gemini Backup API Key 1</label>
+                                                <input type="password" id="gemini_backup_1" class="form-control form-control-sm" placeholder="Backup Key 1">
+                                            </div>
+                                            <div>
+                                                <label class="text-light-muted small">Gemini Backup API Key 2</label>
+                                                <input type="password" id="gemini_backup_2" class="form-control form-control-sm" placeholder="Backup Key 2">
+                                            </div>
+                                            <div>
+                                                <label class="text-light-muted small">Gemini Backup API Key 3</label>
+                                                <input type="password" id="gemini_backup_3" class="form-control form-control-sm" placeholder="Backup Key 3">
+                                            </div>
+                                            <div>
+                                                <label class="text-light-muted small">Gemini Backup API Key 4</label>
+                                                <input type="password" id="gemini_backup_4" class="form-control form-control-sm" placeholder="Backup Key 4">
+                                            </div>
+                                            <div>
+                                                <label class="text-light-muted small">Gemini Backup API Key 5</label>
+                                                <input type="password" id="gemini_backup_5" class="form-control form-control-sm" placeholder="Backup Key 5">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="openai-key-group" style="display:none;">
+                                    <label for="openai_key">OpenAI API Key</label>
+                                    <div class="input-password-wrapper">
+                                        <input type="password" id="openai_key" class="form-control" placeholder="sk-proj-...">
+                                        <button type="button" class="toggle-password-btn"><i class="fa-solid fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="anthropic-key-group" style="display:none;">
+                                    <label for="anthropic_key">Anthropic Claude API Key</label>
+                                    <div class="input-password-wrapper">
+                                        <input type="password" id="anthropic_key" class="form-control" placeholder="sk-ant-...">
+                                        <button type="button" class="toggle-password-btn"><i class="fa-solid fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fmp_key">Financial Modeling Prep (FMP) Key (ស្រេចចិត្ត)</label>
+                                    <input type="password" id="fmp_key" class="form-control" placeholder="Optional Calendar Key">
+                                </div>
+                                
+                                <button type="submit" class="btn btn-success mt-3" id="save-config-btn">
+                                    <i class="fa-solid fa-floppy-disk"></i> រក្សាទុកការកំណត់
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- MT5 & Risk Management -->
+                    <div class="card glass-card settings-mt5">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-shield-halved"></i> ការគ្រប់គ្រងហានិភ័យ និង គណនី MT5</h3>
+                        </div>
+                        <div class="card-content">
+                            <form id="mt5-form">
+                                <div class="form-group">
+                                    <label for="mt5_account_type">ប្រភេទគណនី (MT5 Account Type)</label>
+                                    <select id="mt5_account_type" class="form-control">
+                                        <option value="demo">គណនីសាកល្បង (Demo Account)</option>
+                                        <option value="real">គណនីពិតប្រាកដ (Real Live Account)</option>
+                                    </select>
+                                    <small class="form-help" id="account-mode-help">Demo mode is safer for testing. Real mode can place live broker orders when execution is enabled.</small>
+                                </div>
+                                <div class="form-group grid-layout grid-double">
+                                    <div>
+                                        <label for="mt5_login">លេខគណនី MT5 Login ID</label>
+                                        <input type="text" id="mt5_login" class="form-control" placeholder="ឧទាហរណ៍៖ 5012345">
+                                    </div>
+                                    <div>
+                                        <label for="mt5_server">ម៉ាស៊ីនបម្រើ MT5 Server</label>
+                                        <input type="text" id="mt5_server" class="form-control" placeholder="ឧទាហរណ៍៖ MetaQuotes-Demo">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mt5_password">លេខសម្ងាត់ MT5 Password</label>
+                                    <div class="input-password-wrapper">
+                                        <input type="password" id="mt5_password" class="form-control" placeholder="MT5 password">
+                                        <button type="button" class="toggle-password-btn"><i class="fa-solid fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mt5_terminal_path">MT5 Terminal Path (terminal64.exe)</label>
+                                    <input type="text" id="mt5_terminal_path" class="form-control" placeholder="C:\Program Files\MetaTrader 5\terminal64.exe">
+                                    <small class="form-help">If login says MT5 x64 not found, paste the full path to your broker's terminal64.exe here.</small>
+                                </div>
+                                <div class="connection-panel" id="mt5-connection-result">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    <span>Enter MT5 account details, then test the connection before enabling execution.</span>
+                                </div>
+                                
+                                <div class="form-group grid-layout grid-double">
+                                    <div>
+                                        <label for="trading_strategy">យុទ្ធសាស្ត្រជួញដូរ (Trading Strategy)</label>
+                                        <select id="trading_strategy" class="form-control">
+                                            <option value="scalping">Scalping Trading (Fast Profit)</option>
+                                            <option value="day_trading">Day Trading (Intraday Trend)</option>
+                                            <option value="swing">Swing Trading (Medium-term Trend)</option>
+                                            <option value="position">Position Trading (Long-term Trend)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="trading_timeframe">ពេលវេលាជួញដូរ (Auto-Trading Timeframe)</label>
+                                        <select id="trading_timeframe" class="form-control">
+                                            <option value="M5">M5 (5 Minutes - Fast Scalping)</option>
+                                            <option value="M15">M15 (15 Minutes - Standard Scalping)</option>
+                                            <option value="H1">H1 (1 Hour - Swing Trading)</option>
+                                            <option value="D1">D1 (1 Day - Long-term Swing)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <hr class="card-separator">
+                                
+                                <h4><i class="fa-solid fa-coins text-warning"></i> ការគ្រប់គ្រងហានិភ័យ (Risk Management)</h4>
+                                <div class="form-group grid-layout" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
+                                    <div>
+                                        <label for="lot_size">ទំហំឡូដ (Lot Size)</label>
+                                        <input type="number" step="0.01" min="0.01" id="lot_size" class="form-control" value="0.01">
+                                    </div>
+                                    <div>
+                                        <label for="sl_pips">Stop Loss (Pips)</label>
+                                        <input type="number" id="sl_pips" class="form-control" value="50">
+                                    </div>
+                                    <div>
+                                        <label for="tp_pips">Take Profit (Pips)</label>
+                                        <input type="number" id="tp_pips" class="form-control" value="100">
+                                    </div>
+                                    <div>
+                                        <label for="scalping_target_pips">គោលដៅ Scalping (Pips)</label>
+                                        <input type="number" id="scalping_target_pips" class="form-control" value="15">
+                                    </div>
+                                    <div>
+                                        <label for="max_open_positions">ចំនួន Position អតិបរមា (Max Positions)</label>
+                                        <input type="number" min="1" max="10" id="max_open_positions" class="form-control" value="3">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group mt-3">
+                                    <div class="inline-toggle-group">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="auto_lot_enabled">
+                                            <span class="slider"></span>
+                                        </label>
+                                        <div class="toggle-label-desc">
+                                            <span class="toggle-label-title text-light fw-bold">កែតម្រូវទំហំឡូតដោយស្វ័យប្រវត្តិតាមសមតុល្យ (Enable Auto Lot Size by Balance)</span>
+                                            <span class="toggle-label-subtitle">គណនាទំហំឡូតដោយស្វ័យប្រវត្តិតាមសមតុល្យគណនី MT5 (ឧទាហរណ៍៖ 0.01 ឡូត ក្នុង $100)</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 ps-5" id="auto-lot-settings-sub" style="display:none; max-width: 300px;">
+                                        <div>
+                                            <label for="balance_step" class="text-light-muted small">សមតុល្យសម្រាប់ 0.01 Lot (Balance Step for 0.01 Lot)</label>
+                                            <input type="number" id="balance_step" class="form-control" value="100">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group mt-3">
+                                    <div class="inline-toggle-group">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="partial_tp_enabled">
+                                            <span class="slider"></span>
+                                        </label>
+                                        <div class="toggle-label-desc">
+                                            <span class="toggle-label-title text-light fw-bold">បើកការកាត់ចំណេញពាក់កណ្តាល (Enable Partial Take Profit)</span>
+                                            <span class="toggle-label-subtitle">បតនឹងកាត់ចំណេញពាក់កណ្តាលនៃទំហំឡូដ និងរុញ SL ទៅចំណុចដើម (Break-even)</span>
+                                        </div>
+                                    </div>
+                                    <div class="grid-layout grid-double mt-2 ps-5" id="partial-tp-settings-sub" style="display:none; gap: 1rem;">
+                                        <div>
+                                            <label for="partial_tp_pips">គោលដៅ Pips កាត់ចំណេញ (Partial TP Target Pips)</label>
+                                            <input type="number" id="partial_tp_pips" class="form-control" value="30">
+                                        </div>
+                                        <div>
+                                            <label for="partial_tp_percent">ភាគរយកាត់ចំណេញ (Close Volume Percentage %)</label>
+                                            <input type="number" min="10" max="90" step="10" id="partial_tp_percent" class="form-control" value="50">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mt-3">
+                                    <div class="inline-toggle-group">
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="trailing_stop_enabled">
+                                            <span class="slider"></span>
+                                        </label>
+                                        <div class="toggle-label-desc">
+                                            <span class="toggle-label-title text-light fw-bold">បើកការទាញ Stop Loss តាមតម្លៃចំណេញ (Enable Trailing Stop Loss)</span>
+                                            <span class="toggle-label-subtitle">បតនឹងរំកិល Stop Loss ទៅតាមតម្លៃដែលកំពុងចំណេញដើម្បីការពារប្រាក់ចំណេញ</span>
+                                        </div>
+                                    </div>
+                                    <div class="grid-layout grid-double mt-2 ps-5" id="trailing-stop-settings-sub" style="display:none; gap: 1rem;">
+                                        <div>
+                                            <label for="trailing_activation_pips">តម្លៃ Pips ដើម្បីចាប់ផ្តើមទាញ (Activation Pips)</label>
+                                            <input type="number" id="trailing_activation_pips" class="form-control" value="20">
+                                        </div>
+                                        <div>
+                                            <label for="trailing_stop_pips">ចម្ងាយ Pips ទាញតាមក្រោយ (Trailing Distance Pips)</label>
+                                            <input type="number" id="trailing_stop_pips" class="form-control" value="30">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group inline-toggle-group mt-3">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="live_trading">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <div class="toggle-label-desc">
+                                        <span class="toggle-label-title text-danger fw-bold">ដំណើរការជួញដូរផ្ទាល់ (Enable Live Execution)</span>
+                                        <span class="toggle-label-subtitle">បតនឹងបញ្ជូនបញ្ជាទិញ/លក់ពិតប្រាកដទៅកាន់ MT5 នៅពេលមានសញ្ញា AI</span>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success mt-3" id="save-mt5-btn">
+                                    <i class="fa-solid fa-floppy-disk"></i> រក្សាទុកការកំណត់ MT5 & ហានិភ័យ
+                                </button>
+                                <button type="button" class="btn btn-secondary mt-3" id="test-mt5-btn">
+                                    <i class="fa-solid fa-plug-circle-check"></i> Test MT5 Login
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: Trade History & Analytics -->
+            <section id="tab-analytics" class="tab-pane">
+                <!-- Analytics Summary Row -->
+                <div class="grid-layout grid-four analytics-summary-grid" style="margin-bottom: 1.5rem;">
+                    <div class="card glass-card stat-item-card">
+                        <div class="stat-card-body">
+                            <div class="stat-icon-wrapper pnl-icon">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">ផលចំណេញ/ខាតសរុប (Total PnL)</span>
+                                <h2 id="analytics-total-pnl" class="stat-value text-success">$0.00</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card glass-card stat-item-card">
+                        <div class="stat-card-body">
+                            <div class="stat-icon-wrapper winrate-icon">
+                                <i class="fa-solid fa-award"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">អត្រាឈ្នះ (Win Rate)</span>
+                                <h2 id="analytics-win-rate" class="stat-value text-info">0%</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card glass-card stat-item-card">
+                        <div class="stat-card-body">
+                            <div class="stat-icon-wrapper trades-icon">
+                                <i class="fa-solid fa-handshake"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">ចំនួនត្រេដសរុប (Total Trades)</span>
+                                <h2 id="analytics-total-trades" class="stat-value text-light">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card glass-card stat-item-card">
+                        <div class="stat-card-body">
+                            <div class="stat-icon-wrapper average-pnl-icon">
+                                <i class="fa-solid fa-calculator"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">ផលចំណេញមធ្យម (Avg Trade PnL)</span>
+                                <h2 id="analytics-avg-pnl" class="stat-value text-light">$0.00</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-layout grid-main">
+                    <!-- Column 1: Cumulative PnL Curve -->
+                    <div class="card glass-card span-double pnl-chart-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-line"></i> ក្រាហ្វលទ្ធផលកើនឡើងសរុប (Cumulative Profit Curve)</h3>
+                        </div>
+                        <div class="card-content" style="position: relative; height: 280px; padding: 10px;">
+                            <canvas id="cumulative-pnl-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Strategy Efficiency & Win/Loss Breakdown -->
+                    <div class="card glass-card win-loss-pie-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-pie"></i> លទ្ធផលលម្អិត (Win/Loss Ratio)</h3>
+                        </div>
+                        <div class="card-content text-center" style="padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;">
+                            <div class="win-loss-pie-container" style="position: relative; width: 140px; height: 140px;">
+                                <canvas id="win-loss-pie-canvas" width="140" height="140"></canvas>
+                            </div>
+                            <div class="pie-labels" style="display: flex; gap: 20px; font-size: 0.9rem;">
+                                <span style="display: flex; align-items: center; gap: 6px;"><span class="pie-dot" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #10b981;"></span> ឈ្នះ (Wins)</span>
+                                <span style="display: flex; align-items: center; gap: 6px;"><span class="pie-dot" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #ef4444;"></span> ចាញ់ (Losses)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Trade History Table with Expandable AI Details -->
+                <div class="card glass-card trade-history-full-card" style="margin-top: 1.5rem;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3><i class="fa-solid fa-file-invoice-dollar"></i> កំណត់ត្រាប្រតិបត្តិការលម្អិត (Detailed Trading Record)</h3>
+                        <span class="badge badge-primary" id="history-total-badge">0 Trades</span>
+                    </div>
+                    <div class="card-content" style="padding: 0; overflow-x: auto;">
+                        <table class="premium-table" id="analytics-history-table">
+                            <thead>
+                                <tr>
+                                    <th>ពេលវេលា (Time)</th>
+                                    <th>ប្រភេទ (Type)</th>
+                                    <th>តម្លៃចូល (Entry)</th>
+                                    <th>តម្លៃចេញ (Exit)</th>
+                                    <th>Stop Loss / Take Profit</th>
+                                    <th>លទ្ធផល ($ PnL)</th>
+                                    <th>ស្ថានភាព (Status)</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="analytics-history-tbody">
+                                <!-- Dynamic trade rows will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: User Profile -->
+            <section id="tab-profile" class="tab-pane">
+                <div class="grid-layout grid-settings">
+                    <!-- Profile Info & Avatar Card -->
+                    <div class="card glass-card profile-main-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-user-gear"></i> ប្រវត្តិរូបអ្នកប្រើប្រាស់ (User Profile)</h3>
+                        </div>
+                        <div class="card-content text-center" style="display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 30px 20px;">
+                            <div class="profile-avatar-container">
+                                <img src="/static/images/profile.png" alt="User Profile Portrait" class="profile-avatar-img">
+                                <div class="avatar-glow-ring"></div>
+                            </div>
+                            
+                            <div class="profile-name-info">
+                                <h2 id="profile-display-name" class="text-light" style="font-family: 'Outfit', sans-serif; font-weight: 700; margin-bottom: 5px;">Netz Trader</h2>
+                                <span class="badge badge-success" style="font-size: 0.8rem; padding: 4px 10px;"><i class="fa-solid fa-crown"></i> Elite Account</span>
+                            </div>
+
+                            <div style="width: 100%; text-align: left; margin-top: 10px;">
+                                <form id="profile-edit-form">
+                                    <div class="form-group">
+                                        <label for="profile_nickname">ឈ្មោះហៅក្រៅ (Trader Nickname)</label>
+                                        <input type="text" id="profile_nickname" class="form-control" value="Netz Trader">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="profile_goal">គោលដៅប្រាក់ចំណេញប្រចាំថ្ងៃ (Daily Profit Goal - $)</label>
+                                        <input type="number" id="profile_goal" class="form-control" value="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="profile_risk_limit">ដែនកំណត់ខាតប្រចាំថ្ងៃ (Daily Risk Limit - $)</label>
+                                        <input type="number" id="profile_risk_limit" class="form-control" value="50">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary mt-2" style="width: 100%;">
+                                        <i class="fa-solid fa-user-pen"></i> ធ្វើបច្ចុប្បន្នភាពគណនី (Update Profile)
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Broker & System Connection Card -->
+                    <div class="card glass-card profile-details-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-network-wired"></i> ស្ថានភាពការតភ្ជាប់ប្រព័ន្ធ (System Connections)</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="profile-meta-grid" style="display: flex; flex-direction: column; gap: 15px;">
+                                <div class="meta-item-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                                    <span class="text-light-muted">MetaTrader 5 ID:</span>
+                                    <span id="profile-mt5-login" class="font-monospace text-light">Disconnected</span>
+                                </div>
+                                <div class="meta-item-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                                    <span class="text-light-muted">Server Broker:</span>
+                                    <span id="profile-mt5-server" class="font-monospace text-light">---</span>
+                                </div>
+                                <div class="meta-item-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                                    <span class="text-light-muted">Account Mode:</span>
+                                    <span id="profile-mt5-type" class="badge badge-warning">Demo Mode</span>
+                                </div>
+                                <div class="meta-item-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                                    <span class="text-light-muted">Leverage:</span>
+                                    <span id="profile-mt5-leverage" class="font-monospace text-light">---</span>
+                                </div>
+                                <div class="meta-item-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                                    <span class="text-light-muted">AI Trading Engine:</span>
+                                    <span id="profile-ai-engine" class="text-light">Gemini AI</span>
+                                </div>
+                                <div class="meta-item-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                                    <span class="text-light-muted">Trading Strategy:</span>
+                                    <span id="profile-strategy" class="text-light text-capitalize">Scalping</span>
+                                </div>
+                                <div class="meta-item-row" style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                                    <span class="text-light-muted">Active Timeframe:</span>
+                                    <span id="profile-timeframe" class="badge badge-primary">H1</span>
+                                </div>
+                            </div>
+                            
+                            <hr class="card-separator">
+                            
+                            <div class="broker-live-dashboard" style="background: rgba(255,255,255,0.02); border-radius: 12px; padding: 15px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.04);">
+                                <h4 style="margin-bottom: 12px; font-size: 0.95rem; font-weight: 600;"><i class="fa-solid fa-chart-line text-success"></i> ព័ត៌មានគណនីជួញដូរផ្ទាល់ (Live Metrics)</h4>
+                                <div class="grid-layout grid-double" style="gap: 12px;">
+                                    <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                                        <div class="val-lbl" style="font-size: 0.75rem; color: var(--text-secondary);">Balance</div>
+                                        <div class="val-num text-light" id="profile-balance" style="font-size: 1.1rem; font-family: 'Outfit'; font-weight: 600;">$0.00</div>
+                                    </div>
+                                    <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                                        <div class="val-lbl" style="font-size: 0.75rem; color: var(--text-secondary);">Equity</div>
+                                        <div class="val-num text-success" id="profile-equity" style="font-size: 1.1rem; font-family: 'Outfit'; font-weight: 600;">$0.00</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Script imports -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "api_provider": "ensemble",
+  "openai_key": "YOUR_OPENAI_KEY",
+  "gemini_key": "YOUR_GEMINI_KEY",
+  "fmp_key": "YOUR_FMP_KEY",
+  "anthropic_key": "YOUR_ANTHROPIC_KEY",
+  "mt5": {
+    "login": "YOUR_MT5_LOGIN",
+    "password": "YOUR_MT5_PASSWORD",
+    "server": "YOUR_MT5_SERVER",
+    "live_trading": false,
+    "account_type": "demo",
+    "terminal_path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe"
+  },
+  "risk_management": {
+    "sl_pips": 10.0,
+    "tp_pips": 20.0,
+    "lot_size": 0.01,
+    "scalping_target_pips": 5.0,
+    "max_open_positions": 1,
+    "trailing_stop_enabled": true,
+    "trailing_stop_pips": 30.0,
+    "trailing_activation_pips": 20.0,
+    "partial_tp_enabled": true,
+    "partial_tp_pips": 30.0,
+    "partial_tp_percent": 40.0,
+    "auto_lot_enabled": true,
+    "balance_step": 10.0
+  },
+  "trading_strategy": "scalping",
+  "trading_timeframe": "M5",
+  "gemini_backup_keys": []
+}
